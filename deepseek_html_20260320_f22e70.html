@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>浩 · Neon Odyssey | 赛博旅行·苹果美学</title>
+    <!-- 本次升级点：
+         1. 亮色云朵完全改用圆形粒子（与暗黑星星粒子相同技术）
+         2. 颜色调整为淡灰色 #d0d8e0，提高透明度至0.6-0.8，确保可见
+         3. 粒子大小30-100px，移动速度0.2，连线极淡但保留
+         4. 移除图片粒子，解决显示问题
+    -->
+    <!-- SEO 元数据 -->
+    <meta name="description" content="浩的霓虹奥德赛——赛博朋克旅行灵感集，莫兰迪色系点缀暗黑，沉浸式3D地球与粒子效果。探索未来城市与废墟美学。">
+    <meta name="keywords" content="赛博朋克, 旅行, 霓虹, 莫兰迪, 3D地球, 粒子背景, 浩, Neon Odyssey">
+    <meta name="author" content="Hao">
+    <!-- Open Graph 社交卡片 -->
+    <meta property="og:title" content="浩 · Neon Odyssey | 赛博朋克旅行">
+    <meta property="og:description" content="暗黑基底 × 莫兰迪霓虹 —— 沉浸式旅行作品集">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1517433456452-f9633a875f6f?w=1200">
+    <meta property="og:url" content="#">
+    <!-- Tailwind + Inter 字体 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet">
+    <!-- tsParticles & Three.js (r134) -->
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <style>
+        /* 全局变量 & 重置 */
+        * { transition: background-color 0.3s, border-color 0.2s, color 0.2s, box-shadow 0.2s; }
+        body {
+            --bg-primary: #0b0e17;      /* 深空黑 */
+            --text-primary: #eef0f5;
+            --accent-rose: #c7a8b8;
+            --accent-sage: #a8b5b2;
+            --accent-mist: #8a9ba3;
+            --card-bg: rgba(20,22,30,0.7);
+            --nav-bg: rgba(11,14,23,0.8);
+            --shadow-glow: 0 0 12px var(--accent-mist);
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding-top: 80px; /* 固定导航预留 */
+        }
+        body.light-mode {
+            --bg-primary: #f5f2ed;
+            --text-primary: #4a7c9d;      /* 高级雾蓝 */
+            --accent-rose: #b38b9b;
+            --accent-sage: #7f928b;
+            --accent-mist: #6f828c;
+            --card-bg: rgba(255,250,240,0.7);
+            --nav-bg: rgba(245,242,237,0.8);
+            --shadow-glow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        /* 固定导航 Apple风格 */
+        .nav-fixed {
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            background: var(--nav-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            z-index: 50;
+        }
+        .apple-button {
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            background: rgba(120,120,140,0.15);
+            border: none;
+            color: var(--text-primary);
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            transition: all 0.2s;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .apple-button:hover {
+            background: rgba(140,140,160,0.25);
+            box-shadow: var(--shadow-glow);
+            transform: scale(1.02);
+        }
+        body.light-mode .apple-button {
+            background: rgba(0,0,0,0.05);
+            color: #4a7c9d;
+        }
+        /* 地球容器：彻底透明，无任何背景 */
+        #earth-container {
+            width: 100%;
+            height: 360px;
+            border-radius: 3rem;
+            overflow: hidden;
+            touch-action: none; /* 拖拽时禁止滚动 */
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            box-shadow: none !important;  /* 不要阴影，避免块状感 */
+            border: none;
+        }
+        @media (max-width: 768px) { #earth-container { height: 300px; } }
+        /* 巨型标题 */
+        .hero-title {
+            font-size: clamp(2.5rem, 10vw, 5rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+        }
+        /* 卡片 Apple风格 */
+        .apple-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 2rem;
+            padding: 1.5rem;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.2);
+            transition: transform 0.25s, box-shadow 0.25s;
+        }
+        .apple-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.3), var(--shadow-glow);
+        }
+        body.light-mode .apple-card:hover {
+            box-shadow: 0 16px 40px rgba(0,0,0,0.1);
+        }
+        /* 标签样式：亮色模式无背景浅色描边 */
+        .work-tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--accent-mist);
+        }
+        body.light-mode .work-tag {
+            background: transparent !important;
+            border: 1px solid #a0b0c0;
+            color: #4a7c9d;
+        }
+        /* 粒子容器 */
+        #tsparticles {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        /* 内容层 */
+        .content {
+            position: relative;
+            z-index: 10;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 1.5rem 2rem;
+        }
+        /* 模态框 Apple风格 */
+        .modal-overlay {
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(12px);
+            z-index: 200;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 2.5rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        }
+        /* 工具卡片网格 */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+        @media (max-width: 640px) { .tools-grid { grid-template-columns: 1fr; } }
+        /* 标题柔和霓虹 (亮色模式减弱) */
+        .neon-soft {
+            text-shadow: 0 0 8px var(--accent-rose);
+        }
+        body.light-mode .neon-soft {
+            text-shadow: 0 1px 6px rgba(74,124,157,0.3);
+            color: var(--text-primary);
+        }
+        body.light-mode h1, body.light-mode h2, body.light-mode h3 {
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+<!-- 固定导航 Apple -->
+<div class="nav-fixed px-4 md:px-6 py-3 flex justify-between items-center">
+    <div class="text-xl font-semibold tracking-tight" data-zh="浩 · 霓虹奥德赛" data-en="Hao · Neon Odyssey">浩 · 霓虹奥德赛</div>
+    <div class="flex gap-2 items-center">
+        <button id="theme-toggle" class="apple-button text-sm" aria-label="切换主题">🌙 暗</button>
+        <button id="lang-toggle" class="apple-button text-sm" aria-label="切换语言">🌐 EN</button>
+        <!-- 音乐控件整合 -->
+        <div class="flex items-center gap-1 apple-button py-1 px-2">
+            <audio id="bg-audio" loop preload="none" crossorigin="anonymous"></audio>
+            <button id="play-music" class="text-sm px-1">▶️</button>
+            <button id="stop-music" class="text-sm px-1">⏹️</button>
+            <input type="range" id="volume-control" class="w-12 h-1 bg-[#8a9ba3] rounded-full" min="0" max="1" step="0.05" value="0.5">
+        </div>
+    </div>
+</div>
+
+<!-- 主内容 -->
+<div class="content">
+    <!-- Hero 区：左文案 + 右地球 -->
+    <div class="flex flex-col md:flex-row items-center gap-12 md:gap-8 py-10 md:py-16">
+        <div class="flex-1 text-center md:text-left">
+            <h1 class="hero-title neon-soft" data-zh="废墟与霓虹" data-en="RUINS & NEON">废墟与霓虹</h1>
+            <p class="text-xl md:text-2xl mt-4 max-w-xl opacity-80" data-zh="数字游民 · 赛博美学收集者" data-en="Digital Nomad · Cyber Aesthetic Collector">数字游民 · 赛博美学收集者</p>
+            <p class="mt-6 text-base max-w-md mx-auto md:mx-0" data-zh="游走于东京、上海、新加坡的地下脉络，记录光影交界的莫兰迪时刻。" data-en="Roaming the underground of Tokyo, Shanghai, Singapore, capturing Morandi moments.">
+                游走于东京、上海、新加坡的地下脉络，记录光影交界的莫兰迪时刻。
+            </p>
+        </div>
+        <div class="flex-1 w-full">
+            <div id="earth-container" class="p-0"></div>
+        </div>
+    </div>
+
+    <!-- 霓虹光影轮播 -->
+    <section class="mt-24">
+        <h2 class="text-3xl md:text-4xl font-light mb-8 text-center neon-soft" data-zh="霓虹光影" data-en="Neon Glow">霓虹光影</h2>
+        <div class="carousel-scroll flex overflow-x-auto gap-6 pb-6">
+            <div class="flex-shrink-0 w-72 apple-card p-3">
+                <img src="https://picsum.photos/id/1043/400/250" loading="lazy" class="rounded-2xl w-full h-40 object-cover">
+                <p class="mt-3 text-lg font-medium" data-zh="涩谷十字路口 · 雨夜" data-en="Shibuya Crossing · Rainy night">涩谷十字路口 · 雨夜</p>
+            </div>
+            <div class="flex-shrink-0 w-72 apple-card p-3">
+                <img src="https://picsum.photos/id/1044/400/250" loading="lazy" class="rounded-2xl w-full h-40 object-cover">
+                <p class="mt-3 text-lg font-medium" data-zh="香港霓虹招牌" data-en="Hong Kong Neon Signs">香港霓虹招牌</p>
+            </div>
+            <div class="flex-shrink-0 w-72 apple-card p-3">
+                <img src="https://picsum.photos/id/1048/400/250" loading="lazy" class="rounded-2xl w-full h-40 object-cover">
+                <p class="mt-3 text-lg font-medium" data-zh="新加坡超级树" data-en="Singapore Supertree">新加坡超级树</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 最新旅程 (动态加载) -->
+    <section class="mt-24">
+        <h2 class="text-3xl md:text-4xl font-light mb-8 text-center neon-soft" data-zh="最新旅程" data-en="Latest Trips">最新旅程</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="latest-works-preview"></div>
+    </section>
+
+    <!-- 作品集 9宫格 (动态加载) -->
+    <section class="mt-24">
+        <h2 class="text-3xl md:text-4xl font-light mb-8 text-center neon-soft" data-zh="作品集 · 赛博遗迹" data-en="PORTFOLIO · CYBER RUINS">作品集 · 赛博遗迹</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6" id="portfolio-grid"></div>
+    </section>
+
+    <!-- 实用小工具模块 -->
+    <section class="mt-24">
+        <h2 class="text-3xl md:text-4xl font-light mb-8 text-center neon-soft" data-zh="实用小工具" data-en="Handy Tools">实用小工具</h2>
+        <div class="tools-grid" id="tools-container">
+            <!-- 由JS生成4个卡片 -->
+        </div>
+    </section>
+
+    <!-- 底部 -->
+    <footer class="mt-24 flex flex-wrap justify-between items-center text-sm text-gray-400 border-t border-white/10 pt-8">
+        <div class="flex gap-6">
+            <span><span data-zh="访客数量: " data-en="Visitors: ">访客数量: </span><span id="visitor-count">1289</span></span>
+            <span><span data-zh="在线: " data-en="Online: ">在线: </span><span id="online-count">7</span></span>
+        </div>
+        <div>© 2026 Hao · Neon Odyssey</div>
+    </footer>
+</div>
+
+<!-- 浮动AI聊天按钮 -->
+<button id="chat-fab" class="fixed bottom-6 right-6 w-14 h-14 rounded-full apple-card flex items-center justify-center text-2xl shadow-2xl z-50 border-0" style="background: var(--card-bg);">🤖</button>
+
+<!-- AI聊天模态框 -->
+<div id="chat-modal" class="fixed inset-0 z-[200] hidden items-center justify-center p-4 modal-overlay" role="dialog">
+    <div class="modal-content">
+        <button id="close-chat" class="float-right text-2xl leading-none">&times;</button>
+        <h3 class="text-2xl neon-soft mb-4" data-zh="AI 旅行灵感" data-en="AI Travel Inspo">AI 旅行灵感</h3>
+        <div class="grid gap-3">
+            <button class="chat-prompt-btn apple-button w-full text-left" data-prompt="给我推荐三个赛博朋克风格的城市旅行攻略，包含隐秘打卡点。">🌆 DeepSeek: 赛博城市推荐</button>
+            <button class="chat-prompt-btn apple-button w-full text-left" data-prompt="帮我规划一个7天的霓虹美学旅行路线，从东京到上海。">🗺️ Kimi: 霓虹美学7日路线</button>
+            <button class="chat-prompt-btn apple-button w-full text-left" data-prompt="写一段赛博朋克风格的旅行短文案，带emoji。">✨ 赛博文案生成</button>
+        </div>
+    </div>
+</div>
+
+<!-- 通用详情模态 -->
+<div id="detail-modal" class="fixed inset-0 z-[300] hidden items-center justify-center p-4 modal-overlay" role="dialog">
+    <div class="modal-content max-w-2xl max-h-[80vh] overflow-y-auto" id="detail-content">
+        <!-- 动态填充 -->
+    </div>
+</div>
+
+<!-- 粒子背景容器 -->
+<div id="tsparticles"></div>
+
+<script>
+    (function() {
+        // ---------- 变量 ----------
+        let currentLang = 'zh';
+        let isDark = true;
+        let works = []; // 从JSON加载
+
+        // 工具定义
+        const tools = [
+            { id:'weather', title_zh:'旅行天气预报', title_en:'Travel Weather', icon:'☁️' },
+            { id:'packing', title_zh:'智能打包清单', title_en:'Smart Packing', icon:'🧳' },
+            { id:'compare', title_zh:'机票/酒店比价', title_en:'Price Compare', icon:'✈️' },
+            { id:'diary', title_zh:'旅行日记记录', title_en:'Quick Diary', icon:'📝' }
+        ];
+
+        // ---------- 粒子配置 ----------
+        const darkParticleConfig = {
+            fpsLimit: 60,
+            background: { color: "transparent" },
+            particles: {
+                number: { value: 60, density: { enable: true, area: 800 } },
+                color: { value: ["#c7a8b8", "#a8b5b2", "#8a9ba3"] },
+                shape: { type: "circle" },
+                opacity: { value: 0.6, random: true },
+                size: { value: 3, random: true },
+                move: { enable: true, speed: 0.5, direction: "none", random: true, straight: false },
+                links: { enable: true, distance: 150, color: "#8a9ba3", opacity: 0.3, width: 1 }
+            },
+            interactivity: {
+                events: { onHover: { enable: true, mode: "repulse" }, onClick: { enable: true, mode: "push" } },
+                modes: { repulse: { distance: 100 }, push: { quantity: 4 } }
+            },
+            detectRetina: true
+        };
+
+        // 亮色云朵配置：圆形粒子，淡灰色，高可见度
+        const lightParticleConfig = {
+            fpsLimit: 60,
+            background: { color: "transparent" },
+            particles: {
+                number: { value: 30, density: { enable: true, area: 800 } },
+                color: { value: "#d0d8e0" }, // 单一淡灰色，更纯净
+                shape: { type: "circle" },
+                opacity: { 
+                    value: 0.7, 
+                    random: true,
+                    anim: { enable: true, speed: 0.8, opacity_min: 0.4 }
+                },
+                size: { 
+                    value: { min: 30, max: 100 }, 
+                    random: true,
+                    animation: {
+                        enable: true,
+                        speed: 2,
+                        minimumValue: 25,
+                        maximumValue: 110,
+                        sync: false
+                    }
+                },
+                move: { 
+                    enable: true, 
+                    speed: 0.2, 
+                    direction: "top", 
+                    random: true, 
+                    straight: false,
+                    outModes: "out"
+                },
+                links: { 
+                    enable: true, 
+                    distance: 180, 
+                    color: "#d0d8e0", 
+                    opacity: 0.15, 
+                    width: 0.8 
+                }
+            },
+            interactivity: {
+                events: { onClick: { enable: true, mode: "push" } },
+                modes: { push: { quantity: 3 } }
+            },
+            detectRetina: true
+        };
+
+        // 加载粒子配置
+        function loadParticleConfig(mode) {
+            const config = mode === 'dark' ? darkParticleConfig : lightParticleConfig;
+            tsParticles.load("tsparticles", config);
+        }
+
+        // ---------- 加载作品数据 ----------
+        async function loadWorks() {
+            try {
+                const response = await fetch('works.json');
+                works = await response.json();
+            } catch (e) {
+                console.warn('works.json not found, using default data');
+                works = [
+                    { id:1, img:'https://picsum.photos/id/1015/400/300', title_zh:'涩谷废墟', title_en:'Shibuya Ruins', desc_zh:'雨夜霓虹，赛博朋克初代圣地。', desc_en:'Rainy neon, the original cyberpunk mecca.', tags:['城市','霓虹'], guideUrl:'#' },
+                    { id:2, img:'https://picsum.photos/id/1018/400/300', title_zh:'重庆森林', title_en:'Chongqing Express', desc_zh:'立体交通与迷雾，未来感爆棚。', desc_en:'Multi-level transport and mist, futuristic.', tags:['山城','科幻'], guideUrl:'#' },
+                    { id:3, img:'https://picsum.photos/id/1043/400/300', title_zh:'香港招牌林', title_en:'Hong Kong Signs', desc_zh:'即将消失的霓虹丛林。', desc_en:'Disappearing neon jungle.', tags:['招牌','密集'], guideUrl:'#' },
+                    { id:4, img:'https://picsum.photos/id/1048/400/300', title_zh:'滨海湾', title_en:'Marina Bay', desc_zh:'超未来主义绿洲。', desc_en:'Futuristic oasis.', tags:['新加坡','灯光'], guideUrl:'#' },
+                    { id:5, img:'https://picsum.photos/id/100/400/300', title_zh:'首尔夜空', title_en:'Seoul Night', desc_zh:'江南区电子夜景。', desc_en:'Gangnam electronic nightscape.', tags:['科技','都市'], guideUrl:'#' },
+                    { id:6, img:'https://picsum.photos/id/1011/400/300', title_zh:'曼谷街头', title_en:'Bangkok Streets', desc_zh:'霓虹与烟火交织。', desc_en:'Neon meets烟火.', tags:['街头','喧闹'], guideUrl:'#' },
+                    { id:7, img:'https://picsum.photos/id/1022/400/300', title_zh:'上海赛博', title_en:'Shanghai Cyber', desc_zh:'陆家嘴的后现代轮廓。', desc_en:'Post-modern skyline Lujiazui.', tags:['摩天楼','未来'], guideUrl:'#' },
+                    { id:8, img:'https://picsum.photos/id/1025/400/300', title_zh:'柏林废墟', title_en:'Berlin Ruins', desc_zh:'工业废土与电子乐。', desc_en:'Industrial wasteland & techno.', tags:['废墟','工业'], guideUrl:'#' },
+                    { id:9, img:'https://picsum.photos/id/1033/400/300', title_zh:'东京雨夜', title_en:'Tokyo Rain', desc_zh:'新宿黄金街的潮湿霓虹。', desc_en:'Shinjuku golden street wet neon.', tags:['雨','赛博'], guideUrl:'#' }
+                ];
+            }
+            renderAll();
+        }
+
+        // ---------- 渲染作品 ----------
+        function renderAll() {
+            const latestWorks = works.slice(0,3);
+            const grid = document.getElementById('portfolio-grid');
+            grid.innerHTML = '';
+            works.forEach(work => {
+                const card = document.createElement('div');
+                card.className = 'apple-card p-3 cursor-pointer';
+                card.innerHTML = `<img src="${work.img}" loading="lazy" class="rounded-xl w-full h-32 md:h-40 object-cover">
+                    <p class="mt-2 font-medium" data-zh="${work.title_zh}" data-en="${work.title_en}">${work.title_zh}</p>
+                    <div class="flex flex-wrap gap-1 mt-1">` +
+                    work.tags.map(t => `<span class="work-tag">${t}</span>`).join('') +
+                    `</div>`;
+                card.onclick = () => openWorkDetail(work);
+                grid.appendChild(card);
+            });
+
+            const latestDiv = document.getElementById('latest-works-preview');
+            latestDiv.innerHTML = '';
+            latestWorks.forEach(work => {
+                const col = document.createElement('div');
+                col.className = 'apple-card p-3';
+                col.innerHTML = `<img src="${work.img}" class="rounded-xl w-full h-32 object-cover">
+                    <p class="mt-2 text-base" data-zh="${work.title_zh}" data-en="${work.title_en}">${work.title_zh}</p>`;
+                latestDiv.appendChild(col);
+            });
+
+            // 工具卡片
+            const toolsDiv = document.getElementById('tools-container');
+            toolsDiv.innerHTML = '';
+            tools.forEach(t => {
+                const card = document.createElement('div');
+                card.className = 'apple-card p-5 cursor-pointer flex flex-col items-center text-center';
+                card.innerHTML = `<span class="text-4xl mb-3">${t.icon}</span>
+                    <h4 class="text-lg font-medium" data-zh="${t.title_zh}" data-en="${t.title_en}">${t.title_zh}</h4>`;
+                card.onclick = () => openToolModal(t.id);
+                toolsDiv.appendChild(card);
+            });
+
+            updateLanguage(currentLang);
+        }
+
+        // 打开作品详情
+        function openWorkDetail(work) {
+            const modal = document.getElementById('detail-modal');
+            document.getElementById('detail-content').innerHTML = `
+                <button class="float-right text-2xl" onclick="document.getElementById('detail-modal').classList.add('hidden')">&times;</button>
+                <img src="${work.img}" class="rounded-2xl w-full max-h-64 object-cover">
+                <h2 class="text-3xl mt-4" data-zh="${work.title_zh}" data-en="${work.title_en}">${work.title_zh}</h2>
+                <p class="mt-2" data-zh="${work.desc_zh}" data-en="${work.desc_en}">${work.desc_zh}</p>
+                <div class="flex gap-2 mt-3">${work.tags.map(t => `<span class="px-3 py-1 rounded-full bg-black/30">${t}</span>`).join('')}</div>
+                <a href="${work.guideUrl}" target="_blank" class="apple-button inline-block mt-4" data-zh="查看完整攻略" data-en="Full Guide">查看完整攻略</a>
+            `;
+            modal.classList.remove('hidden');
+            updateLanguage(currentLang);
+        }
+
+        // 工具模态
+        function openToolModal(toolId) {
+            const modal = document.getElementById('detail-modal');
+            let content = '';
+            if (toolId === 'weather') {
+                content = `<button class="float-right text-2xl" onclick="document.getElementById('detail-modal').classList.add('hidden')">&times;</button>
+                    <h3 class="text-2xl neon-soft mb-4" data-zh="天气预报" data-en="Weather">天气预报</h3>
+                    <div class="space-y-2"><p>东京: 18°C 霓虹雾</p><p>上海: 22°C 多云</p><p>新加坡: 28°C 雷阵雨</p></div>
+                    <button class="apple-button mt-4" onclick="alert('模拟刷新')" data-zh="刷新" data-en="Refresh">刷新</button>`;
+            } else if (toolId === 'packing') {
+                const saved = JSON.parse(localStorage.getItem('packingList') || '["护照","充电器","相机"]');
+                content = `<button class="float-right text-2xl" onclick="document.getElementById('detail-modal').classList.add('hidden')">&times;</button>
+                    <h3 class="text-2xl neon-soft mb-4" data-zh="打包清单" data-en="Packing List">打包清单</h3>
+                    <div id="packing-checklist">` +
+                    saved.map((item,idx) => `<label class="flex items-center gap-2"><input type="checkbox" checked class="w-4 h-4"> ${item}</label>`).join('') +
+                    `</div><button class="apple-button mt-4" onclick="alert('已保存到本地')" data-zh="保存" data-en="Save">保存</button>`;
+            } else if (toolId === 'compare') {
+                content = `<button class="float-right text-2xl" onclick="document.getElementById('detail-modal').classList.add('hidden')">&times;</button>
+                    <h3 class="text-2xl neon-soft mb-4" data-zh="比价模拟" data-en="Price Compare">比价模拟</h3>
+                    <input placeholder="出发地" class="w-full p-2 rounded bg-white/10 mb-2"><input placeholder="目的地" class="w-full p-2 rounded bg-white/10">
+                    <button class="apple-button mt-2" onclick="alert('搜索到最低价 ¥2800')" data-zh="搜索" data-en="Search">搜索</button>`;
+            } else if (toolId === 'diary') {
+                const savedNote = localStorage.getItem('travelNote') || '';
+                content = `<button class="float-right text-2xl" onclick="document.getElementById('detail-modal').classList.add('hidden')">&times;</button>
+                    <h3 class="text-2xl neon-soft mb-4" data-zh="快速日记" data-en="Quick Diary">快速日记</h3>
+                    <textarea id="diary-text" rows="4" class="w-full p-3 rounded bg-white/10" placeholder="记录此刻...">${savedNote}</textarea>
+                    <button class="apple-button mt-4" onclick="localStorage.setItem('travelNote', document.getElementById('diary-text').value); alert('已保存')" data-zh="保存" data-en="Save">保存</button>`;
+            }
+            document.getElementById('detail-content').innerHTML = content;
+            modal.classList.remove('hidden');
+            updateLanguage(currentLang);
+        }
+
+        // 语言切换
+        function updateLanguage(lang) {
+            document.querySelectorAll('[data-zh][data-en]').forEach(el => {
+                el.innerText = lang === 'zh' ? el.dataset.zh : el.dataset.en;
+            });
+            document.getElementById('lang-toggle').innerHTML = lang === 'zh' ? '🌐 EN' : '🌐 中';
+        }
+
+        // 主题切换
+        function toggleTheme() {
+            isDark = !isDark;
+            document.body.classList.toggle('light-mode', !isDark);
+            document.getElementById('theme-toggle').innerHTML = isDark ? '🌙 暗' : '☀️ 亮';
+            updateEarthTheme();
+            loadParticleConfig(isDark ? 'dark' : 'light');
+        }
+
+        // ---------- 地球仪 ----------
+        let scene, camera, renderer, earth, clouds, nightLights;
+        let isDragging = false;
+        let lastX = 0, lastY = 0;
+        let velocityY = 0;
+        const friction = 0.95;
+        const dragSensitivity = 0.005;
+        const autoRotateSpeed = 0.001;
+        let precessionAngle = 0;
+
+        function initEarth() {
+            const container = document.getElementById('earth-container');
+            const w = container.clientWidth, h = container.clientHeight;
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, w/h, 0.1, 1000);
+            camera.position.z = 3.4;
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(w, h);
+            renderer.setClearColor(0x000000, 0);
+            container.innerHTML = '';
+            container.appendChild(renderer.domElement);
+
+            const loader = new THREE.TextureLoader();
+            const earthMapDay = loader.load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/earth_atmos_2048.jpg');
+            const earthMapNight = loader.load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/earth_night_2048.jpg');
+            const cloudMap = loader.load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/earth_clouds_1024.png');
+
+            const geo = new THREE.SphereGeometry(1, 64, 32);
+            const mat = new THREE.MeshPhongMaterial({ map: earthMapDay, emissive: new THREE.Color(0x111122), emissiveIntensity: 0.2, shininess: 5 });
+            earth = new THREE.Mesh(geo, mat);
+            earth.scale.set(1.2, 1.2, 1.2);
+            earth.rotation.x = 0.41015237421866746;
+            scene.add(earth);
+
+            const cloudGeo = new THREE.SphereGeometry(1.01, 64, 32);
+            const cloudMat = new THREE.MeshPhongMaterial({ map: cloudMap, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+            clouds = new THREE.Mesh(cloudGeo, cloudMat);
+            clouds.scale.set(1.212, 1.212, 1.212);
+            clouds.rotation.x = 0.41015237421866746;
+            scene.add(clouds);
+
+            const nightGeo = new THREE.SphereGeometry(1.02, 64, 32);
+            const nightMat = new THREE.MeshPhongMaterial({ map: earthMapNight, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, emissive: new THREE.Color(0x335588) });
+            nightLights = new THREE.Mesh(nightGeo, nightMat);
+            nightLights.scale.set(1.224, 1.224, 1.224);
+            nightLights.rotation.x = 0.41015237421866746;
+            scene.add(nightLights);
+
+            const ambient = new THREE.AmbientLight(0x404060);
+            scene.add(ambient);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(2, 1, 3);
+            scene.add(dirLight);
+
+            // 拖拽事件
+            container.addEventListener('mousedown', (e) => { e.preventDefault(); isDragging = true; lastX = e.clientX; lastY = e.clientY; });
+            container.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                const dx = e.clientX - lastX;
+                const dy = e.clientY - lastY;
+                earth.rotation.y += dx * dragSensitivity;
+                earth.rotation.x += dy * dragSensitivity * 0.5;
+                earth.rotation.x = Math.max(-0.8, Math.min(0.8, earth.rotation.x));
+                velocityY = dx * dragSensitivity * 0.8;
+                lastX = e.clientX;
+                lastY = e.clientY;
+            });
+            container.addEventListener('mouseup', () => { isDragging = false; });
+            container.addEventListener('mouseleave', () => { isDragging = false; });
+            container.addEventListener('touchstart', (e) => { e.preventDefault(); if (e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; } });
+            container.addEventListener('touchmove', (e) => {
+                if (!isDragging || e.touches.length !== 1) return;
+                e.preventDefault();
+                const dx = e.touches[0].clientX - lastX;
+                const dy = e.touches[0].clientY - lastY;
+                earth.rotation.y += dx * dragSensitivity;
+                earth.rotation.x += dy * dragSensitivity * 0.5;
+                earth.rotation.x = Math.max(-0.8, Math.min(0.8, earth.rotation.x));
+                velocityY = dx * dragSensitivity * 0.8;
+                lastX = e.touches[0].clientX;
+                lastY = e.touches[0].clientY;
+            });
+            container.addEventListener('touchend', () => { isDragging = false; });
+
+            updateEarthTheme();
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            precessionAngle += 0.001;
+            const baseTilt = 0.41015237421866746;
+            const precessionAmplitude = 0.02;
+            earth.rotation.x = baseTilt + Math.sin(precessionAngle) * precessionAmplitude;
+            earth.rotation.z = Math.cos(precessionAngle) * precessionAmplitude * 0.5;
+
+            if (!isDragging) {
+                earth.rotation.y += velocityY;
+                velocityY *= friction;
+            }
+            earth.rotation.y += autoRotateSpeed;
+
+            clouds.rotation.x = earth.rotation.x;
+            clouds.rotation.z = earth.rotation.z;
+            clouds.rotation.y = earth.rotation.y * 1.2;
+            if (nightLights) {
+                nightLights.rotation.x = earth.rotation.x;
+                nightLights.rotation.z = earth.rotation.z;
+                nightLights.rotation.y = earth.rotation.y * 0.9;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function updateEarthTheme() {
+            if (!earth) return;
+            const isLight = document.body.classList.contains('light-mode');
+            if (isLight) {
+                earth.material.emissive.setHex(0x000000);
+                earth.material.emissiveIntensity = 0.0;
+                earth.material.shininess = 1;
+                clouds.material.opacity = 0.6;
+                clouds.material.color.setHex(0xffffff);
+                if (nightLights) nightLights.visible = false;
+            } else {
+                earth.material.emissive.setHex(0x224466);
+                earth.material.emissiveIntensity = 0.4;
+                earth.material.shininess = 10;
+                clouds.material.opacity = 0.4;
+                if (nightLights) {
+                    nightLights.visible = true;
+                    nightLights.material.opacity = 0.5;
+                }
+            }
+        }
+
+        // ---------- 音乐 ----------
+        const audio = document.getElementById('bg-audio');
+        audio.src = 'https://cdn.pixabay.com/download/audio/2022/11/22/audio_30f1c0e1a0.mp3?filename=cyberpunk-logo-12593.mp3';
+        document.getElementById('play-music').addEventListener('click', () => audio.play().catch(()=>{}));
+        document.getElementById('stop-music').addEventListener('click', () => { audio.pause(); audio.currentTime = 0; });
+        document.getElementById('volume-control').addEventListener('input', (e) => audio.volume = e.target.value);
+
+        // ---------- 访客计数 & 在线模拟 ----------
+        let count = localStorage.getItem('neonOdysseyVisits') || 1876;
+        count = parseInt(count) + 1;
+        localStorage.setItem('neonOdysseyVisits', count);
+        document.getElementById('visitor-count').innerText = count;
+        setInterval(() => {
+            document.getElementById('online-count').innerText = Math.floor(Math.random() * 15 + 3);
+        }, 5000);
+
+        // 初始化
+        loadWorks();
+        updateLanguage('zh');
+        initEarth();
+        loadParticleConfig('dark'); // 默认暗黑
+
+        // 事件绑定
+        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+        document.getElementById('lang-toggle').addEventListener('click', () => {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            updateLanguage(currentLang);
+        });
+
+        // AI聊天
+        const chatFab = document.getElementById('chat-fab');
+        const chatModal = document.getElementById('chat-modal');
+        document.getElementById('close-chat').onclick = () => chatModal.classList.add('hidden');
+        chatFab.onclick = () => chatModal.classList.remove('hidden');
+        document.querySelectorAll('.chat-prompt-btn').forEach(btn => {
+            btn.onclick = () => {
+                const prompt = btn.dataset.prompt;
+                navigator.clipboard.writeText(prompt);
+                window.open(btn.innerText.includes('Kimi') ? 'https://kimi.moonshot.cn' : 'https://chat.deepseek.com', '_blank');
+            };
+        });
+
+        // 模态关闭
+        window.onclick = (e) => {
+            if (e.target.classList.contains('modal-overlay')) e.target.classList.add('hidden');
+        };
+    })();
+</script>
+<noscript>请启用JavaScript</noscript>
+</body>
+</html>
